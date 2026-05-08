@@ -110,18 +110,29 @@ movies_raw = pd.read_csv(
     sep="::",
     engine="python",
     names=["movie_id", "title", "genres"],
+    #encoding指定编码格式，ml-1m数据集中电影标题包含一些特殊字符，使用默认的utf-8编码可能会导致读取错误，因此指定为latin-1编码可以正确读取这些特殊字符。
+    #编码格式决定了计算机如何将存储的二进制数据解释为字符，一共有三种常见的编码格式：ASCII、UTF-8 和 Latin-1（ISO-8859-1）。
+    # ASCII 是最基本的编码，只能表示 128 个字符，适用于英文文本；
+    # UTF-8 是一种变长编码，可以表示全球范围内的所有字符，适用于多语言文本；
+    # Latin-1 是一种单字节编码，可以表示西欧语言中的字符，适用于包含特殊字符的文本。
+    #这里选择Latin是因为 movies.dat 文件是使用 Latin - 1 编码保存的
     encoding="latin-1",
 )
 
 # 构造 LLM 输入文本：标题 + 类型
 # 例："Toy Story (1995) | Animation Children's Comedy"
+#后面的replace是把genres列中的|替换成空格，这样就不会干扰LLM的理解了，毕竟|在文本中可能没有明确的语义，反而会增加理解难度
 movies_raw["llm_input_text"] = movies_raw["title"] + " | " + movies_raw["genres"].str.replace("|", " ")
 
 # 同时保存编码后的 movie_id（用于后面对齐向量）
 lbe_movie = LabelEncoder()
 movies_raw["movie_id_encoded"] = lbe_movie.fit_transform(movies_raw["movie_id"].astype(str))
 
+#set_index 是 pandas 中的一个方法，用于将 DataFrame 的某一列设置为索引。
+#这里的 movie_id_encoded 是经过 LabelEncoder 编码后的电影 ID 列，llm_input_text 是构造的 LLM 输入文本列。
+#movie_text_map 就变成了一个以 movie_id_encoded 为索引，llm_input_text 为数据列的 DataFrame。
 movie_text_map = movies_raw[["movie_id_encoded", "llm_input_text"]].set_index("movie_id_encoded")
+#将现在的这个映射表保存为csv文件到指定的这个路径，
 movie_text_map.to_csv(f"{OUT_DIR}/movie_text_map.csv")
 print(f"\n电影文本映射表已保存，共 {len(movie_text_map)} 部电影")
 print(movie_text_map.head(3))
@@ -130,7 +141,7 @@ print(movie_text_map.head(3))
 # 为什么不用随机切分？
 # 因为推荐系统是时序问题：训练集必须是"过去"，测试集必须是"未来"
 # 随机切分会造成数据泄漏（用未来数据预测过去）
-
+#这回直接就是在这个合并过的大表df上切了
 df = df.sort_values("timestamp").reset_index(drop=True)
 
 split_idx = int(len(df) * 0.8)   # 80% 训练，20% 测试
@@ -138,7 +149,10 @@ train = df.iloc[:split_idx]
 test  = df.iloc[split_idx:]
 
 print(f"\ntrain: {train.shape}, test: {test.shape}")
+#因为 label 是二分类的（0 或 1），所以它的均值其实就是正样本占比：
+#训练集正样本占比
 print(f"train label 均值: {train['label'].mean():.4f}")
+#测试集正样本占比
 print(f"test  label 均值: {test['label'].mean():.4f}")
 
 # ── 8. 保存 ───────────────────────────────────────────────────────────────
