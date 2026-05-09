@@ -7,8 +7,9 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 import os
+import joblib
 
-# ── 0. 路径配置，改成你自己的路径 ──────────────────────────────────────────
+# ── 0. 路径配置，改成你自己的路径 ─────────────────────────────────────────
 RAW_DIR = "./data/raw"          # ← 改成你本地 ml-1m 文件夹路径
 OUT_DIR = "./data/processed"
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -89,6 +90,7 @@ print(f"\n冷启动分层分布:\n{df['coldstart_tier'].value_counts()}")
 #定义了一个新的列表 sparse_features，包含了所有的稀疏特征（类别型特征）的列名。
 sparse_features = ["user_id", "movie_id", "gender", "age", "occupation", "zip"]
 
+lbe_dict = {}  # 存所有特征的encoder，以防万一
 for feat in sparse_features:
     lbe = LabelEncoder()
     #df[feat] = — 用编码后的新值覆盖原来的列。
@@ -97,11 +99,14 @@ for feat in sparse_features:
     # 将原始的类别值替换为对应的整数标签。 
     #这些列全都给编码了，astype(str) 是为了统一类型，LabelEncoder 对混合类型容易报错
     # astype(str) 是为了统一类型，LabelEncoder 对混合类型容易报错
+    lbe_dict[feat] = lbe  # 每个都存下来，以防后续需要反编码或者对新数据进行同样的编码
 
 # 验证编码结果
 for feat in sparse_features:
     print(f"{feat}: {df[feat].nunique()} unique values, range [{df[feat].min()}, {df[feat].max()}]")
 
+"""
+全都得改因为这个encoder没对齐，但是可以留着看语法
 # ── 6. 为 LLM 向量生成准备：保存 movie_id → 原始文本 的映射 ──────────────
 # 注意：这里用编码前的原始 movie_id 对应文本，所以要在编码前做映射
 # 重新读一次 movies 获取原始信息（编码前的 movie_id）
@@ -136,6 +141,25 @@ movie_text_map = movies_raw[["movie_id_encoded", "llm_input_text"]].set_index("m
 movie_text_map.to_csv(f"{OUT_DIR}/movie_text_map.csv")
 print(f"\n电影文本映射表已保存，共 {len(movie_text_map)} 部电影")
 print(movie_text_map.head(3))
+"""
+
+# ── 6. 为 LLM 向量生成准备：保存 movie_id → 原始文本 的映射 ──────────────
+#lbe_movie = LabelEncoder()
+#df["movie_id"] = lbe_movie.fit_transform(df["movie_id"].astype(str))
+# 存 lbe_movie 供第二步使用
+#joblib.dump(lbe_movie, f"{OUT_DIR}/lbe_movie.pkl")
+
+#我真服了这个变量名字全都不对我还得改
+# 存电影文本映射，用的是 merge 后已编码的 movie_id
+movie_text_map = df[["movie_id", "title", "genres"]].drop_duplicates("movie_id").copy()
+movie_text_map = movie_text_map.rename(columns = {'movie_id': 'movie_id_encoded'})
+movie_text_map["llm_input_text"] = movie_text_map["title"] + " | " + movie_text_map["genres"].str.replace("|", " ")
+movie_text_map[["movie_id_encoded", "llm_input_text"]].to_csv(f"{OUT_DIR}/movie_text_map.csv", index=False)
+print(f"\n电影文本映射表已保存，共 {len(movie_text_map)} 部电影")
+print(movie_text_map.head(3))
+
+
+
 
 # ── 7. 按时间戳排序后切分 train / test ────────────────────────────────────
 # 为什么不用随机切分？

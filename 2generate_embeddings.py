@@ -38,6 +38,7 @@ print(movie_text_map.head(3))
 # 在这里，movie_ids 是一个包含所有 movie_id_encoded 的列表，由movie_text_map的索引转来的，也就是movie_id_encoded列的值组成的列表。
 # texts 是一个包含所有 llm_input_text 的列表，由movie_text_map的 llm_input_text 列转来的，也就是每部电影对应的文本描述组成的列表。
 
+#索引列和文本列分别转化成python列表，方便后续批量调用 API
 movie_ids   = movie_text_map.index.tolist()
 texts       = movie_text_map["llm_input_text"].tolist()
 embeddings  = {}   # {movie_id_encoded: numpy_array}字典格式
@@ -92,8 +93,13 @@ else:
 # 训练时需要根据 movie_id 快速查询向量
 # 矩阵的行索引 = movie_id_encoded，直接用 matrix[movie_id] 取向量，O(1) 速度
 
-max_id     = max(embeddings.keys())
-emb_matrix = np.zeros((max_id + 1, DIMENSION), dtype=np.float32)
+#max_id     = max(embeddings.keys())
+#emb_matrix = np.zeros((max_id + 1, DIMENSION), dtype=np.float32)
+# 不用 max_id+1，直接用编码后的 movie 数量
+#movie_id_encoded 在第 27 行被设成了索引，不再是普通列，
+#所以不能用movie_text_map["movie_id_encoded"] 取。len(movie_text_map)的效果是一样的——返回电影总数。
+n_movies = len(movie_text_map)  # 从第一步知道是 3706
+emb_matrix = np.zeros((n_movies, DIMENSION), dtype=np.float32)
 
 for mid, vec in embeddings.items():
     emb_matrix[mid] = vec
