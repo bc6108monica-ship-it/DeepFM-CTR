@@ -8,16 +8,21 @@ import pandas as pd
 import numpy as np
 import time
 from zhipuai import ZhipuAI
+from dotenv import load_dotenv
+import os
 
 # ── 0. 配置 ────────────────────────────────────────────────────────────────
-API_KEY   = "你的智谱API_KEY"        # ← 替换成你的 key
+load_dotenv()
+API_KEY = os.getenv("ZHIPU_API_KEY")
+client = ZhipuAI(api_key=API_KEY)# ← 替换成你的 key
 DATA_DIR  = "./data/processed"
-OUT_DIR   = "./embeddings"
+OUT_DIR   = "./data/embeddings"
 DIMENSION = 1024                      # 选择1024维，原因见文档分析
 BATCH_SIZE = 64                       # 智谱单次最多64条
 
 import os
 os.makedirs(OUT_DIR, exist_ok=True)
+
 
 client = ZhipuAI(api_key=API_KEY)
 

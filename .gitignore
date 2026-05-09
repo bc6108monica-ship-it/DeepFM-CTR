@@ -223,3 +223,10 @@ criteo_sample.txt
 
 # Local test notebook
 test.ipynb
+
+# .gitignore
+.env
+data/embeddings/        
+#向量文件也不用传，太大
+data/processed/    
+# 处理后的数据也不传
