@@ -20,13 +20,10 @@ OUT_DIR   = "./data/embeddings"
 DIMENSION = 1024                      # 选择1024维，原因见文档分析
 BATCH_SIZE = 64                       # 智谱单次最多64条
 
-import os
 os.makedirs(OUT_DIR, exist_ok=True)
 
-
-client = ZhipuAI(api_key=API_KEY)
-
 # ── 1. 读取电影文本映射表 ──────────────────────────────────────────────────
+#index_col指的是在读取 CSV 文件时，指定哪一列作为 DataFrame 的索引列。这里指定 movie_id_encoded 作为索引列，这样在后续处理时可以直接通过 movie_id_encoded 来访问对应的 llm_input_text。
 movie_text_map = pd.read_csv(f"{DATA_DIR}/movie_text_map.csv", index_col="movie_id_encoded")
 print(f"共 {len(movie_text_map)} 部电影需要生成向量")
 print(movie_text_map.head(3))
@@ -36,15 +33,24 @@ print(movie_text_map.head(3))
 # 单条循环调用：3883次 HTTP 请求，慢且容易触发频率限制
 # 批量调用：约61次请求，快10-20倍
 
+#.tolist()：这个方法将 pandas.Index 对象转换为 Python 列表
+# 这样就可以方便地将数据传递给需要列表输入的函数或 API。
+# 在这里，movie_ids 是一个包含所有 movie_id_encoded 的列表，由movie_text_map的索引转来的，也就是movie_id_encoded列的值组成的列表。
+# texts 是一个包含所有 llm_input_text 的列表，由movie_text_map的 llm_input_text 列转来的，也就是每部电影对应的文本描述组成的列表。
+
 movie_ids   = movie_text_map.index.tolist()
 texts       = movie_text_map["llm_input_text"].tolist()
-embeddings  = {}   # {movie_id_encoded: numpy_array}
+embeddings  = {}   # {movie_id_encoded: numpy_array}字典格式
 
+#整除运算向下取整所以要先加一个BATCH_SIZE - 1，保证最后一批如果不满也能被处理到
 total_batches = (len(texts) + BATCH_SIZE - 1) // BATCH_SIZE
 
 for i in range(0, len(texts), BATCH_SIZE):
+    #这个i是从0开始，每次增加BATCH_SIZE，直到文本列表的末尾。比如如果BATCH_SIZE是64，那么i的值将依次是0, 64, 128, ...，直到超过文本列表的长度。
     batch_ids   = movie_ids[i : i + BATCH_SIZE]
     batch_texts = texts[i : i + BATCH_SIZE]
+    # batch_num 是当前批次的编号，从1开始。i // BATCH_SIZE 是整数除法，表示已经处理了多少个完整的批次，
+    # 所以加1就是当前批次的编号。比如说现在i是128，BATCH_SIZE是64，那么i // BATCH_SIZE就是2，说明已经处理了2个完整的批次，所以当前是第3个批次，batch_num就是3。
     batch_num   = i // BATCH_SIZE + 1
 
     try:
@@ -55,7 +61,10 @@ for i in range(0, len(texts), BATCH_SIZE):
         )
 
         # response.data 是一个列表，顺序和输入对应
+        #智谱 API 返回的 response 对象，response.data 是一个列表，里面每个元素是一个embedding 结果对象，列表的顺序和你传进去的 batch_texts 顺序一一对应。
+        #batch_texts[0]  →  response.data[0]  →  "Toy Story..." 的向量
         for j, emb_obj in enumerate(response.data):
+            #返回的这个emb_obj有多个属性，其中 embedding 就是我们需要的向量结果。所以需要.embedding
             embeddings[batch_ids[j]] = np.array(emb_obj.embedding, dtype=np.float32)
 
         print(f"批次 {batch_num}/{total_batches} 完成，已处理 {min(i+BATCH_SIZE, len(texts))} 部电影")
