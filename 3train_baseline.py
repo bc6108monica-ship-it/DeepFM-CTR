@@ -24,7 +24,8 @@ test  = pd.read_csv(f"{DATA_DIR}/test.csv")
 print(f"train: {train.shape}, test: {test.shape}")
 
 # ── 2. 定义特征列 ──────────────────────────────────────────────────────────
-# SparseFeat 三个关键参数：
+# SparseFeat 三个关键参数：这个是要告诉Deepfm的
+# 每个类别特征的名字、这个特征有多少个不同的值（决定 embedding 表的行数）、每个值映射成多少维的向量
 #   name       : 列名
 #   vocabulary_size : 这个特征有多少个不同的值（决定 embedding 表的行数）
 #   embedding_dim   : 每个值映射成多少维的向量
@@ -45,7 +46,9 @@ feature_names = get_feature_names(fixlen_feature_columns)
 print(f"特征列表: {feature_names}")
 
 # ── 3. 构造模型输入 ────────────────────────────────────────────────────────
-# DeepCTR 的输入格式是字典：{特征名: numpy_array}
+#转化成字典格式，DeepFM 的输入格式是字典：{特征名: numpy_array}
+# DeepCTR 的输入格式是字典：KEY:特征名，VALUE: numpy_array  
+# {特征名: numpy_array}
 train_input = {name: train[name].values for name in feature_names}
 test_input  = {name: test[name].values  for name in feature_names}
 
@@ -62,13 +65,14 @@ test_labels  = test["label"].values
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"使用设备: {device}")
+print(torch.cuda.get_device_name(0)) 
 
 model = DeepFM(
     linear_feature_columns = fixlen_feature_columns,
     dnn_feature_columns    = fixlen_feature_columns,
     dnn_hidden_units       = (256, 128),
-    dnn_dropout            = 0.3,
-    task                   = "binary",
+    dnn_dropout            = 0.3,#加点 dropout 看看能不能提升泛化，过拟合了的话可以调大一点
+    task                   = "binary",# 2分类问题，输出 sigmoid
     device                 = device,
 )
 
