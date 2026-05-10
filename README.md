@@ -4,7 +4,7 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 
 ## 核心思路
 
-将电影标题和类型通过 LLM 转为语义 embedding（768维），作为 **冻结的稠密特征** 拼接到 Dual-Channel DeepFM 的第二个通道中，缓解冷启动用户/物品的 AUC 衰退问题。
+将电影标题和类型通过 LLM 转为语义 embedding（1024维），作为 **冻结的稠密特征** 拼接到 Dual-Channel DeepFM 的第二个通道中，缓解冷启动用户/物品的 AUC 衰退问题。
 
 ## 实验结果
 
