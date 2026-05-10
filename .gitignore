@@ -224,6 +224,10 @@ criteo_sample.txt
 # Local test notebook
 test.ipynb
 
+# Official baseline (local only, not uploaded)
+deepfm_baseline.py
+run_deepfm.py
+
 # .gitignore
 .env
 data/embeddings/        
