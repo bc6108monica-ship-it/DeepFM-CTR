@@ -8,14 +8,16 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 
 ## 实验结果
 
-| Tier | Baseline DeepFM | Dual-Channel (+ LLM) | Δ AUC |
-|------|:-:|:-:|:-:|
-| Very Cold (<5 interactions) | 0.5680 | **0.6093** | **+4.13%** |
-| Cold (5-20) | 0.6558 | **0.6692** | **+1.34%** |
-| Warm (≥20) | 0.7446 | 0.7447 | +0.02% |
-| **Overall** | 0.7442 | 0.7445 | +0.03% |
+| Tier | Baseline DeepFM | Dual-Channel (1024d) | PCA消融 (64d) | Δ 1024-PCA |
+|------|:-:|:-:|:-:|:-:|
+| Very Cold (<5) | 0.5680 | **0.6093** | 0.6018 | +0.0075 |
+| Cold (5-20) | 0.6558 | **0.6692** | 0.6673 | +0.0019 |
+| Warm (≥20) | 0.7446 | 0.7447 | 0.7445 | +0.0003 |
+| **Overall** | 0.7442 | **0.7445** | 0.7442 | +0.0003 |
 
-**关键结论：** LLM 语义 embedding 对冷启动物品提升显著（Very Cold +4.13%），对热启动物品基本持平，整体 AUC 提升微弱（+0.03%）但冷启动分层改善明显。
+**关键结论：**
+- **LLM embedding 有效**：1024维双通道在冷启动层显著提升（Very Cold +4.13%），热启动基本持平
+- **PCA 降维有损**：1024→64维压缩后冷启动增益折半以上（Very Cold 从 +4.13% 降至 +3.38%），说明语义信息的完整性对冷启动很重要
 
 ## 可视化图表
 
@@ -32,12 +34,11 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 ├── 2generate_embeddings.py      # 调用 LLM 生成语义 embedding
 ├── 3train_baseline.py           # Baseline DeepFM 训练
 ├── 4train_dualchannel.py        # Dual-Channel DeepFM 训练
-├── 5evaluate_coldstart.py       # 冷启动分层评估 + 可视化
-├── deepfm_baseline.py           # DeepFM 模型定义
-└── run_deepfm.py                # 运行入口
+├── 5evaluate_coldstart.py       # PCA消融实验（对比验证）
 ├── results/
 │   ├── baseline_pred.csv
-│   └── dual_pred.csv
+│   ├── dual_pred.csv
+│   └── pca_pred.csv
 ├── figures/
 │   ├── fig1_auc_comparison.png
 │   ├── fig2_coldstart_distribution.png
