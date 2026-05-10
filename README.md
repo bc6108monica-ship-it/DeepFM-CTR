@@ -28,11 +28,13 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 ## 项目结构
 
 ```
-├── 1data_preprocess.py          # 数据预处理
-├── 2generate_semantic_emb.py    # 调用 LLM 生成语义 embedding
-├── 3baseline_deepfm.py          # Baseline DeepFM 训练
-├── 4dual_channel_deepfm.py      # Dual-Channel DeepFM 训练
+├── 1data_process.py             # 数据预处理
+├── 2generate_embeddings.py      # 调用 LLM 生成语义 embedding
+├── 3train_baseline.py           # Baseline DeepFM 训练
+├── 4train_dualchannel.py        # Dual-Channel DeepFM 训练
 ├── 5evaluate_coldstart.py       # 冷启动分层评估 + 可视化
+├── deepfm_baseline.py           # DeepFM 模型定义
+└── run_deepfm.py                # 运行入口
 ├── results/
 │   ├── baseline_pred.csv
 │   └── dual_pred.csv
