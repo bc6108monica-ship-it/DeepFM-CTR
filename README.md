@@ -4,50 +4,47 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 
 ## 项目总览（三层架构）
 
+**第1层 — 功能层：Pipeline 流程**
 ```mermaid
-graph TD
-    %% ── 样式定义 ──
-    classDef layer fill:#f0f0f0,stroke:#333,stroke-width:2px,font-weight:bold
-    classDef func fill:#E3F2FD,stroke:#1565C0,stroke-width:1px
-    classDef sys  fill:#F3E5F5,stroke:#7B1FA2,stroke-width:1px
-    classDef eng  fill:#FFF3E0,stroke:#E65100,stroke-width:1px
-    classDef result fill:#C8E6C9,stroke:#2E7D32,stroke-width:1px
+flowchart LR
+    A[1. 数据预处理] --> B[2. LLM 向量生成] --> C[3. 三组模型训练] --> D[4. 评估可视化]
+```
 
-    %% ══════════ L1: 功能层 ══════════
-    subgraph L1["第1层 · 功能层：跑通 Pipeline，拿到结果"]
+**第2层 — 系统层：模块分工与三组对比**
+```mermaid
+flowchart TB
+    subgraph Data[数据]
+        M1["按时间序 8:2 切分<br/>LabelEncoder 编码<br/>冷启动分层 (very_cold/cold/warm)"]
+    end
+    subgraph LLM[LLM 向量]
+        M2["智谱 Embedding-3 API<br/>批量 64 条/次 → (3706×1024) 矩阵"]
+    end
+    subgraph Train[模型训练]
         direction LR
-        A1["数据预处理<br/>1data_process.py"] --> A2["LLM 向量生成<br/>2generate_embeddings.py"]
-        A2 --> A3["三组模型训练<br/>3/4/4b"]
-        A3 --> A4["评估 & 可视化<br/>5evaluate_coldstart.py"]
+        T1["Baseline<br/>仅 Sparse"] --- T2["Dual-Channel<br/>Sparse+1024d LLM"] --- T3["PCA消融<br/>Sparse+64d"]
     end
-
-    %% ══════════ L2: 系统层 ══════════
-    subgraph L2["第2层 · 系统层：模块设计 & 交互"]
-        direction TB
-        B1["模块A：数据预处理<br/>• 按时间序切分 8:2<br/>• LabelEncoder 编码<br/>• 冷启动分层标记"] --> B2["模块B：LLM 语义向量<br/>• 调智谱 Embedding-3 API<br/>• 批量 64 条/次<br/>• 存为 (N×1024) 矩阵"]
-        B2 --> B3["模块C：模型训练"]
-        B3 --> B4["模块D：评估对比<br/>• 全局 AUC<br/>• 分层 AUC"]
+    subgraph Eval[评估]
+        M4["全局 AUC<br/>分层 AUC (very_cold/cold/warm)"]
     end
+    Data --> LLM --> Train --> Eval
+```
 
-    B3 --> B3a["Baseline DeepFM<br/>仅 Sparse ID 特征"]
-    B3 --> B3b["Dual-Channel<br/>Sparse + 1024d LLM"]
-    B3 --> B3c["PCA 消融<br/>Sparse + 64d PCA"]
-
-    %% ══════════ L3: 工程层 ══════════
-    subgraph L3["第3层 · 工程层：上线考量（实验阶段，标注待完善项）"]
-        direction LR
-        C1["性能<br/>• 80万样本 5 epoch ~分钟级<br/>• embedding 矩阵仅 15MB<br/>• ⚠️ 大数据量需换 Spark"]
-        C2["成本<br/>• LLM API 不到 1 元<br/>• GPU 训练近零成本<br/>• ⚠️ 10x 数据量 embedding 表膨胀"]
-        C3["稳定性<br/>• ⚠️ 未固定随机种子<br/>• ⚠️ 缺 LabelEncoder 持久化<br/>• ⚠️ 缺 unseen 值兜底"]
-        C4["可观测 & 部署<br/>• ⚠️ 缺 TensorBoard/MLflow<br/>• ⚠️ 缺模型 checkpoint<br/>• 上线: ONNX + Redis 缓存"]
+**第3层 — 工程层：上线考量**
+```mermaid
+flowchart LR
+    subgraph Perf[性能]
+        P1["80万样本 ~分钟级<br/>矩阵仅 15MB"]
     end
-
-    %% ── 层级间的关系 ──
-    L1 -.->|支撑| L2
-    L2 -.->|指导| L3
-
-    %% 应用样式
-    class L1,L2,L3 layer
+    subgraph Cost[成本]
+        P2["LLM API < 1 元<br/>GPU 训练近零"]
+    end
+    subgraph Stable[稳定性]
+        P3["缺随机种子固定<br/>缺编码器持久化"]
+    end
+    subgraph Ops[可观测/部署]
+        P4["缺训练曲线记录<br/>ONNX+Redis 上线方案"]
+    end
+    Perf --- Cost --- Stable --- Ops
 ```
 
 ## 核心思路
