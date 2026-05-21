@@ -29,42 +29,19 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 
 ## 项目结构
 
-```mermaid
-mindmap
-  root((DeepFM-CTR))
-    数据管道
-      1data_process.py
-        输入: MovieLens-1M 原始数据
-        处理: train / test 划分 + 冷启动分层
-        输出: data/processed/
-      2generate_embeddings.py
-        输入: 电影标题 + 类型
-        处理: LLM → 1024维语义向量
-        输出: data/embeddings/movie_embeddings.npy
-    模型训练
-      3train_baseline.py
-        模型: DeepFM（仅 Sparse ID 特征）
-        作用: 冷启动 AUC 衰退基线
-      4train_dualchannel.py
-        模型: 双通道 DeepFM（Sparse + 1024d LLM）
-        创新: DNN 有监督学习语义压缩
-      4b_train_pca_channel.py
-        模型: DeepFM + PCA 64维（消融对照）
-        作用: 验证完整语义 > PCA 有损压缩
-    评估可视化
-      5evaluate_coldstart.py
-        评估: AUC 全局 + 分层对比
-        可视化: 生成 PNG 图表
-        figures/
-          fig1_auc_comparison.png
-          fig2_coldstart_distribution.png
-          fig3_auc_improvement.png
-    辅助文件
-      deepfm_baseline.py: DeepFM 模型实现
-      run_deepfm.py: 原始运行入口
-      data/: 数据目录（raw / processed / embeddings）
-      results/: 预测结果 CSV
-        baseline_pred.csv
-        dual_pred.csv
-        pca_pred.csv
+```
+├── 1data_process.py             # 数据预处理
+├── 2generate_embeddings.py      # 调用 LLM 生成语义 embedding
+├── 3train_baseline.py           # Baseline DeepFM 训练
+├── 4train_dualchannel.py        # Dual-Channel DeepFM 训练
+├── 5evaluate_coldstart.py       # PCA消融实验（对比验证）
+├── results/
+│   ├── baseline_pred.csv
+│   ├── dual_pred.csv
+│   └── pca_pred.csv
+├── figures/
+│   ├── fig1_auc_comparison.png
+│   ├── fig2_coldstart_distribution.png
+│   └── fig3_auc_improvement.png
+└── README.md
 ```
