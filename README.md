@@ -64,6 +64,32 @@ flowchart LR
 - **LLM embedding 有效**：1024维双通道在冷启动层显著提升（Very Cold +4.13%），热启动基本持平
 - **PCA 降维有损**：1024→64维压缩后冷启动增益折半以上（Very Cold 从 +4.13% 降至 +3.38%），说明语义信息的完整性对冷启动很重要
 
+## 假设检验（Bootstrap）
+
+对三组模型 × 三个冷启动层级做 paired bootstrap 检验（n=2000, α=0.05）：
+
+| 比较 | Tier | ΔAUC | 95% CI | p-value | 显著 |
+|------|------|------:|--------|--------:|:-:|
+| Dual vs Baseline | Very Cold | +0.0413 | [+0.0033, +0.0816] | 0.037 | ✅ |
+| Dual vs Baseline | Cold | +0.0136 | [+0.0048, +0.0224] | 0.001 | ✅ |
+| PCA vs Baseline | Very Cold | +0.0331 | [+0.0013, +0.0683] | 0.040 | ✅ |
+| PCA vs Baseline | Cold | +0.0115 | [+0.0047, +0.0187] | 0.002 | ✅ |
+| Dual vs PCA | Very Cold | +0.0076 | [-0.0156, +0.0324] | 0.536 | ✗ |
+| Dual vs PCA | Cold | +0.0019 | [-0.0035, +0.0077] | 0.503 | ✗ |
+| 全部比较 | Warm / Overall | ~0 | — | >0.05 | ✗ |
+
+**说明：** Dual 和 PCA 均显著优于 Baseline（冷启动层 p<0.05）；Dual vs PCA 点估计方向一致（1024维更优）但未达统计显著。
+
+## 可视化图表
+
+| 图 | 说明 |
+|----|------|
+| ![fig1](figures/fig1_auc_comparison.png) | AUC 分层对比柱状图 |
+| ![fig2](figures/fig2_coldstart_distribution.png) | 冷启动分布图（长尾问题可视化） |
+| ![fig3](figures/fig3_auc_improvement.png) | 提升幅度图 |
+| ![fig4](figures/fig4_bootstrap_distribution.png) | Bootstrap 分布直方图 |
+| ![fig5](figures/fig5_forest_plot.png) | AUC 差异森林图（95% CI） |
+
 ## 可视化图表
 
 | 图 | 说明 |
@@ -79,7 +105,9 @@ flowchart LR
 ├── 2generate_embeddings.py      # 调用 LLM 生成语义 embedding
 ├── 3train_baseline.py           # Baseline DeepFM 训练
 ├── 4train_dualchannel.py        # Dual-Channel DeepFM 训练
-├── 5evaluate_coldstart.py       # PCA消融实验（对比验证）
+├── 4b_train_pca_channel.py      # PCA 消融实验训练
+├── 5evaluate_coldstart.py       # 冷启动分层评估 + 可视化
+├── 5b_bootstrap_test.py         # Bootstrap 假设检验
 ├── results/
 │   ├── baseline_pred.csv
 │   ├── dual_pred.csv
@@ -87,6 +115,8 @@ flowchart LR
 ├── figures/
 │   ├── fig1_auc_comparison.png
 │   ├── fig2_coldstart_distribution.png
-│   └── fig3_auc_improvement.png
+│   ├── fig3_auc_improvement.png
+│   ├── fig4_bootstrap_distribution.png
+│   └── fig5_forest_plot.png
 └── README.md
 ```
