@@ -7,7 +7,7 @@ Dual-channel DeepFM with LLM semantic embeddings for cold-start CTR prediction o
 **第1层 — 功能层：Pipeline 流程**
 ```mermaid
 flowchart LR
-    A[1. 数据预处理] --> B[2. LLM 向量生成] --> C[3. 三组模型训练] --> D[4. 评估可视化]
+    A[1. 数据预处理] --> B[2. LLM 向量生成] --> C[3. 四组模型训练] --> D[4. 评估可视化]
 ```
 
 **第2层 — 系统层：模块分工与三组对比**
@@ -20,7 +20,7 @@ flowchart TB
         M2["智谱 Embedding-3 API<br/>批量 64 条/次 → (3706×1024) 矩阵"]
     end
     subgraph Train[模型训练]
-        T1["Baseline<br/>仅 Sparse"] --- T2["Dual-Channel<br/>Sparse+1024d LLM"] --- T3["PCA消融<br/>Sparse+64d"]
+        T1["Baseline<br/>仅 Sparse"] --- T2["Dual-Channel<br/>Sparse+1024d"] --- T3["PCA消融<br/>Sparse+64d"] --- T4["Projection<br/>Sparse+64d"]
     end
     subgraph Eval[评估]
         M4["全局 AUC<br/>分层 AUC (very_cold/cold/warm)"]
@@ -48,20 +48,21 @@ flowchart LR
 
 ## 核心思路
 
-将电影标题和类型通过 LLM 转为语义 embedding（1024维），作为 **冻结的稠密特征** 拼接到 Dual-Channel DeepFM 的第二个通道中，缓解冷启动用户/物品的 AUC 衰退问题。
+将电影标题和类型通过 LLM 转为语义 embedding（1024维），作为 **冻结的稠密特征** 注入 DeepFM。针对 LLM 向量维度过高可能稀释稀疏 ID 信号的问题，设计了三种降维方案（Naive Concat → PCA → Trainable Projection），完整对比验证冷启动效果。
 
 ## 实验结果
 
-| Tier | Baseline DeepFM | Dual-Channel (1024d) | PCA消融 (64d) | Δ 1024-PCA |
+| Tier | Baseline | Full 1024d | PCA 64d | Proj 64d |
 |------|:-:|:-:|:-:|:-:|
-| Very Cold (<5) | 0.5680 | **0.6093** | 0.6018 | +0.0075 |
-| Cold (5-20) | 0.6558 | **0.6692** | 0.6673 | +0.0019 |
-| Warm (≥20) | 0.7446 | 0.7447 | 0.7445 | +0.0003 |
-| **Overall** | 0.7442 | **0.7445** | 0.7442 | +0.0003 |
+| Very Cold (<5) | 0.5680 | **0.6093** | 0.6018 | 0.6025 |
+| Cold (5-20) | 0.6558 | **0.6692** | 0.6673 | 0.6657 |
+| Warm (≥20) | 0.7446 | 0.7447 | 0.7445 | 0.7439 |
+| **Overall** | 0.7442 | **0.7445** | 0.7442 | 0.7436 |
 
 **关键结论：**
 - **LLM embedding 有效**：1024维双通道在冷启动层显著提升（Very Cold +4.13%），热启动基本持平
-- **PCA 降维有损**：1024→64维压缩后冷启动增益折半以上（Very Cold 从 +4.13% 降至 +3.38%），说明语义信息的完整性对冷启动很重要
+- **降维方式差异不大**：PCA(64d) 和 Proj(64d) 在冷启动层基本打平（0.6018 vs 0.6025），说明 LLM 语义质量本身足够高，按方差压缩 vs 按梯度压缩差距有限
+- **信息量才是瓶颈**：Full 1024d 相比两个 64d 方案在 Very Cold 层高约 +0.007，说明瓶颈在语义信息量而非降维方式
 
 ## 假设检验（Bootstrap）
 
@@ -97,12 +98,14 @@ flowchart LR
 ├── 3train_baseline.py           # Baseline DeepFM 训练
 ├── 4train_dualchannel.py        # Dual-Channel DeepFM 训练
 ├── 4b_train_pca_channel.py      # PCA 消融实验训练
+├── 4c_train_projection_channel.py # Trainable Projection 消融实验
 ├── 5evaluate_coldstart.py       # 冷启动分层评估 + 可视化
 ├── 5b_bootstrap_test.py         # Bootstrap 假设检验
 ├── results/
 │   ├── baseline_pred.csv
 │   ├── dual_pred.csv
 │   └── pca_pred.csv
+│   └── proj_pred.csv
 ├── figures/
 │   ├── fig1_auc_comparison.png
 │   ├── fig2_coldstart_distribution.png
