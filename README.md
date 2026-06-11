@@ -20,7 +20,6 @@ flowchart TB
         M2["智谱 Embedding-3 API<br/>批量 64 条/次 → (3706×1024) 矩阵"]
     end
     subgraph Train[模型训练]
-        direction LR
         T1["Baseline<br/>仅 Sparse"] --- T2["Dual-Channel<br/>Sparse+1024d LLM"] --- T3["PCA消融<br/>Sparse+64d"]
     end
     subgraph Eval[评估]
@@ -89,14 +88,6 @@ flowchart LR
 | ![fig3](figures/fig3_auc_improvement.png) | 提升幅度图 |
 | ![fig4](figures/fig4_bootstrap_distribution.png) | Bootstrap 分布直方图 |
 | ![fig5](figures/fig5_forest_plot.png) | AUC 差异森林图（95% CI） |
-
-## 可视化图表
-
-| 图 | 说明 |
-|----|------|
-| ![fig1](figures/fig1_auc_comparison.png) | AUC 分层对比柱状图 |
-| ![fig2](figures/fig2_coldstart_distribution.png) | 冷启动分布图（长尾问题可视化） |
-| ![fig3](figures/fig3_auc_improvement.png) | 提升幅度图 |
 
 ## 项目结构
 
